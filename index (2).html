@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Petualangan Belajar & Mario Jump IPAS SD</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        * {
+            font-family: 'Quicksand', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        
+        .font-game {
+            font-family: 'Fredoka One', cursive;
+        }
+
+        /* Animated Sky & Light Rain */
+        .sky-bg {
+            background: linear-gradient(180deg, #38ef7d 0%, #11998e 0%, #4facfe 0%, #00f2fe 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .rain-drop {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.4);
+            width: 2px;
+            height: 14px;
+            opacity: 0.7;
+            animation: fall 1.2s linear infinite;
+        }
+
+        @keyframes fall {
+            0% { transform: translateY(-20px); }
+            100% { transform: translateY(100vh); }
+        }
+
+        /* Bubble Letter Styling */
+        .bubble-letter {
+            font-family: 'Fredoka One', cursive;
+            display: inline-block;
+            transition: all 0.3s ease;
+            text-shadow: 3px 4px 0px rgba(0,0,0,0.2);
+            filter: drop-shadow(0px 8px 4px rgba(0,0,0,0.15));
+        }
+        .bubble-letter:hover {
+            transform: scale(1.25) rotate(-5deg);
+        }
+
+        /* Idle Floating Bounce Animation */
+        @keyframes floating {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(2deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+        .animate-float {
+            animation: floating 3s ease-in-out infinite;
+        }
+
+        /* Ripple Effect */
+        .ripple {
+            position: absolute;
+            border: 4px solid #38bdf8;
+            border-radius: 50%;
+            animation: ripple-anim 0.8s ease-out;
+            pointer-events: none;
+        }
+        @keyframes ripple-anim {
+            0% { width: 0px; height: 0px; opacity: 1; }
+            100% { width: 160px; height: 160px; opacity: 0; }
+        }
+
+        /* Responsive Canvas Container */
+        #gameCanvas {
+            background: transparent;
+            display: block;
+            touch-action: none;
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #f59e0b;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="sky-bg h-screen w-screen overflow-hidden text-slate-800 flex flex-col justify-between">
+
+    <!-- Rain Container -->
+    <div id="rainContainer" class="pointer-events-none absolute inset-0 z-0"></div>
+
+    <!-- AUDIO ENGINE STATUS & CONTROLS -->
+    <header class="relative z-20 flex justify-between items-center p-3 sm:p-4 bg-white/20 backdrop-blur-md shadow-md border-b border-white/30">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center text-white font-game text-xl shadow-lg border-2 border-yellow-200 animate-bounce">
+                🐸
+            </div>
+            <div>
+                <h1 class="font-game text-lg sm:text-2xl text-white drop-shadow-md tracking-wide">EduPetualangan IPAS & Literasi</h1>
+                <p class="text-xs text-white/90 font-semibold hidden sm:block">Belajar Membaca & Game Mario Jump SD</p>
+            </div>
+        </div>
+
+        <!-- Global Control Buttons -->
+        <div class="flex items-center space-x-2">
+            <!-- Student Profile Badge in Header -->
+            <div id="headerStudentProfile" class="hidden sm:flex items-center bg-white/30 backdrop-blur-md px-3 py-1.5 rounded-xl text-white text-xs font-bold border border-white/40 mr-1">
+                <i class="fas fa-user-graduate text-yellow-300 mr-1.5"></i>
+                <span id="displayHeaderStudentName">Siswa</span>
+                <span class="mx-1 font-normal opacity-70">|</span>
+                <span id="displayHeaderStudentClass" class="text-yellow-200">Kelas -</span>
+            </div>
+
+            <button id="btnAudioToggle" onclick="toggleAudio()" class="px-3 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-lg font-bold text-xs sm:text-sm flex items-center transition transform active:scale-95 border-b-4 border-emerald-700">
+                <i class="fas fa-volume-up mr-1" id="audioIcon"></i> <span id="audioText" class="hidden sm:inline">Suara: ON</span>
+            </button>
+            <button id="btnHome" onclick="showScreen('screenMainMenu')" class="px-3 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-xl shadow-lg font-bold text-xs sm:text-sm flex items-center transition transform active:scale-95 border-b-4 border-sky-700">
+                <i class="fas fa-home"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- CONTAINER SCREEN UTAMA -->
+    <main class="relative z-10 flex-grow flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+        
+        <!-- 1. SPLASH SCREEN -->
+        <section id="screenSplash" class="app-screen text-center flex flex-col items-center justify-center p-6 bg-white/30 backdrop-blur-md rounded-3xl border-4 border-white/50 shadow-2xl max-w-lg w-full">
+            <div class="text-7xl sm:text-8xl mb-4 animate-bounce">🍄</div>
+            <h1 class="font-game text-3xl sm:text-5xl text-yellow-300 drop-shadow-[0_4px_0_rgba(0,0,0,0.4)] mb-2">MARIO EDU-JUMP</h1>
+            <p class="text-white font-bold text-sm sm:text-lg mb-6 bg-emerald-600/60 px-4 py-1 rounded-full">Belajar Membaca & IPAS Kelas 5 SD</p>
+            <button onclick="playSFX('click'); showScreen('screenMainMenu')" class="font-game text-xl sm:text-2xl px-8 py-4 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white rounded-2xl shadow-xl transform hover:scale-105 active:scale-95 transition border-b-4 border-orange-700">
+                <i class="fas fa-play mr-2"></i> MULAI PETUALANGAN!
+            </button>
+        </section>
+
+        <!-- 2. MAIN MENU (DENGAN FORM PROFIL SISWA) -->
+        <section id="screenMainMenu" class="app-screen hidden flex flex-col items-center justify-center p-5 bg-white/40 backdrop-blur-md rounded-3xl border-4 border-white/60 shadow-2xl max-w-md w-full text-center overflow-y-auto max-h-[90vh]">
+            <h2 class="font-game text-2xl sm:text-3xl text-white drop-shadow-md mb-3">PROFIL & MENU PETUALANGAN</h2>
+            
+            <!-- Form Input Profil Siswa -->
+            <div class="w-full bg-white/80 backdrop-blur-md p-4 rounded-2xl border-2 border-emerald-400 shadow-inner mb-4 text-left">
+                <label class="block font-game text-sm text-emerald-900 mb-1">
+                    <i class="fas fa-id-card text-emerald-600 mr-1"></i> Nama Lengkap Siswa:
+                </label>
+                <input type="text" id="inputStudentName" placeholder="Ketik nama siswa..." class="w-full px-3 py-2 rounded-xl border-2 border-emerald-300 font-semibold text-slate-800 text-sm focus:outline-none focus:border-emerald-500 mb-3 shadow-sm" value="Budi Santoso">
+
+                <label class="block font-game text-sm text-emerald-900 mb-1">
+                    <i class="fas fa-graduation-cap text-emerald-600 mr-1"></i> Pilih Kelas SD:
+                </label>
+                <select id="selectStudentClass" class="w-full px-3 py-2 rounded-xl border-2 border-emerald-300 font-bold text-slate-800 text-sm focus:outline-none focus:border-emerald-500 shadow-sm bg-white">
+                    <option value="Kelas 1 SD">Kelas 1 SD</option>
+                    <option value="Kelas 2 SD">Kelas 2 SD</option>
+                    <option value="Kelas 3 SD">Kelas 3 SD</option>
+                    <option value="Kelas 4 SD">Kelas 4 SD</option>
+                    <option value="Kelas 5 SD" selected>Kelas 5 SD</option>
+                    <option value="Kelas 6 SD">Kelas 6 SD</option>
+                </select>
+            </div>
+
+            <div class="space-y-3 w-full">
+                <button onclick="saveStudentProfile(); playSFX('click'); startLearningFlow()" class="w-full py-3 bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-white font-game text-lg sm:text-xl rounded-2xl shadow-lg border-b-4 border-teal-700 flex items-center justify-center transition transform active:scale-95">
+                    <i class="fas fa-book-open text-xl mr-3"></i> 1. Belajar Membaca
+                </button>
+                <button onclick="saveStudentProfile(); playSFX('click'); startPracticeMiniGames()" class="w-full py-3 bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white font-game text-lg sm:text-xl rounded-2xl shadow-lg border-b-4 border-blue-700 flex items-center justify-center transition transform active:scale-95">
+                    <i class="fas fa-gamepad text-xl mr-3"></i> 2. Latihan & Mini Game
+                </button>
+                <button onclick="saveStudentProfile(); playSFX('click'); startMiniQuiz()" class="w-full py-3 bg-gradient-to-r from-purple-400 to-indigo-500 hover:from-purple-500 hover:to-indigo-600 text-white font-game text-lg sm:text-xl rounded-2xl shadow-lg border-b-4 border-indigo-700 flex items-center justify-center transition transform active:scale-95">
+                    <i class="fas fa-star text-xl mr-3"></i> 3. Mini Kuis Literasi
+                </button>
+                <button onclick="saveStudentProfile(); playSFX('click'); startMarioGame()" class="w-full py-3 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-game text-lg sm:text-xl rounded-2xl shadow-lg border-b-4 border-rose-800 flex items-center justify-center transition transform active:scale-95 animate-pulse">
+                    <i class="fas fa-running text-xl mr-3"></i> 4. Game Mario Jump (IPAS)
+                </button>
+            </div>
+        </section>
+
+        <!-- 3. LEARNING STAGE (BELAJAR MEMBACA INTERAKTIF) -->
+        <section id="screenLearningStage" class="app-screen hidden w-full max-w-4xl h-[85vh] flex flex-col bg-white/90 backdrop-blur-md rounded-3xl border-4 border-emerald-300 shadow-2xl overflow-hidden">
+            <!-- Learning Header / Nav Tabs -->
+            <div class="bg-emerald-500 p-3 text-white flex flex-wrap justify-center gap-2 border-b-4 border-emerald-700">
+                <button onclick="switchLearnTab('letters')" class="learn-tab-btn px-3 py-1.5 bg-emerald-700 rounded-xl font-game text-xs sm:text-sm">Abjad (A-Z)</button>
+                <button onclick="switchLearnTab('syllables')" class="learn-tab-btn px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-game text-xs sm:text-sm">Suku Kata</button>
+                <button onclick="switchLearnTab('words')" class="learn-tab-btn px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-game text-xs sm:text-sm">Kata & Gambar</button>
+                <button onclick="switchLearnTab('sentences')" class="learn-tab-btn px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-game text-xs sm:text-sm">Kalimat</button>
+                <button onclick="switchLearnTab('punctuation')" class="learn-tab-btn px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-game text-xs sm:text-sm">Tanda Baca</button>
+                <button onclick="switchLearnTab('stories')" class="learn-tab-btn px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-game text-xs sm:text-sm">Cerita Bergambar</button>
+            </div>
+
+            <!-- Learning Content Area -->
+            <div class="flex-grow p-4 overflow-y-auto relative flex flex-col items-center justify-center text-center">
+                
+                <!-- Mascot Helper -->
+                <div class="w-full bg-amber-100 border-2 border-amber-300 rounded-2xl p-3 mb-4 flex items-center shadow-inner">
+                    <div class="text-4xl mr-3 animate-float">🐸</div>
+                    <div id="mascotBubble" class="text-left font-bold text-amber-900 text-sm sm:text-base">
+                        "Halo! Yuk belajar membaca bersama Katak Edu!"
+                    </div>
+                </div>
+
+                <!-- Tab 1: Alphabet A-Z -->
+                <div id="tabLetters" class="learn-subtab w-full">
+                    <h3 class="font-game text-xl text-emerald-800 mb-3">Pengenalan Huruf Abjad</h3>
+                    <div id="alphabetGrid" class="grid grid-cols-4 sm:grid-cols-7 gap-3 max-h-[50vh] overflow-y-auto p-2"></div>
+                </div>
+
+                <!-- Tab 2: Syllables -->
+                <div id="tabSyllables" class="learn-subtab hidden w-full">
+                    <h3 class="font-game text-xl text-emerald-800 mb-3">Belajar Suku Kata</h3>
+                    <div id="syllablesContainer" class="flex flex-wrap justify-center gap-3"></div>
+                </div>
+
+                <!-- Tab 3: Words -->
+                <div id="tabWords" class="learn-subtab hidden w-full">
+                    <h3 class="font-game text-xl text-emerald-800 mb-3">Belajar Kata & Gambar</h3>
+                    <div id="wordsGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
+                </div>
+
+                <!-- Tab 4: Sentences (Karaoke Style) -->
+                <div id="tabSentences" class="learn-subtab hidden w-full">
+                    <h3 class="font-game text-xl text-emerald-800 mb-3">Belajar Membaca Kalimat</h3>
+                    <div id="sentenceDisplay" class="text-2xl sm:text-3xl font-game text-slate-700 my-6 flex justify-center gap-2 flex-wrap"></div>
+                    <button onclick="readCurrentSentence()" class="px-6 py-3 bg-amber-400 hover:bg-amber-500 text-white font-game text-lg rounded-2xl shadow-lg border-b-4 border-amber-600">
+                        <i class="fas fa-play mr-2"></i> Baca Kalimat
+                    </button>
+                </div>
+
+                <!-- Tab 5: Punctuation -->
+                <div id="tabPunctuation" class="learn-subtab hidden w-full">
+                    <h3 class="font-game text-xl text-emerald-800 mb-3">Mengenal Tanda Baca</h3>
+                    <div id="punctuationGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-4"></div>
+                </div>
+
+                <!-- Tab 6: Short Stories -->
+                <div id="tabStories" class="learn-subtab hidden w-full">
+                    <div id="storyCard" class="bg-amber-50 p-6 rounded-2xl border-2 border-amber-200 shadow-md max-w-lg mx-auto">
+                        <div id="storyIcon" class="text-6xl mb-3">🐔</div>
+                        <h4 id="storyTitle" class="font-game text-2xl text-amber-900 mb-2">Budi ke Kebun</h4>
+                        <p id="storyText" class="text-lg text-amber-800 font-semibold mb-4">Budi pergi ke kebun. Ia melihat ayam berlari. Budi merasa sangat senang.</p>
+                        <button onclick="readStory()" class="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-game rounded-xl border-b-4 border-emerald-700">
+                            <i class="fas fa-volume-up mr-2"></i> Dengarkan Cerita
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer Next Step -->
+            <div class="p-3 bg-slate-100 border-t flex justify-between items-center">
+                <button onclick="showScreen('screenMainMenu')" class="px-4 py-2 bg-slate-400 text-white font-game rounded-xl">Kembali</button>
+                <button onclick="startPracticeMiniGames()" class="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-game rounded-xl shadow border-b-4 border-emerald-700">
+                    Lanjut Latihan <i class="fas fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- 4. LATIHAN INTERAKTIF (MINI GAMES) -->
+        <section id="screenPracticeGames" class="app-screen hidden w-full max-w-2xl bg-white/90 backdrop-blur-md p-6 rounded-3xl border-4 border-sky-400 shadow-2xl text-center">
+            <h2 class="font-game text-2xl sm:text-3xl text-sky-800 mb-2">Mini Game: Menyusun Kata</h2>
+            <p class="text-sm text-slate-600 mb-4 font-bold">Susun huruf-huruf di bawah ini menjadi kata yang benar!</p>
+
+            <div id="miniGameTargetIcon" class="text-6xl mb-2">⚽</div>
+            <div id="miniGameDropZone" class="flex justify-center gap-2 mb-6 min-h-[60px] p-2 bg-sky-100 rounded-2xl border-2 border-dashed border-sky-300"></div>
+
+            <div id="miniGameLetterTiles" class="flex justify-center gap-3 mb-6"></div>
+
+            <button onclick="checkSpellingGame()" class="px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-game text-lg rounded-2xl shadow-lg border-b-4 border-emerald-700">
+                Periksa Jawaban
+            </button>
+        </section>
+
+        <!-- 5. MINI QUIZ LITERASI -->
+        <section id="screenMiniQuiz" class="app-screen hidden w-full max-w-xl bg-white/90 backdrop-blur-md p-6 rounded-3xl border-4 border-purple-400 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <span class="font-game text-purple-700 text-lg">Kuis Literasi SD</span>
+                <div class="flex items-center space-x-2">
+                    <span class="text-yellow-500 font-game"><i class="fas fa-star"></i> <span id="quizStars">0</span></span>
+                    <span class="text-amber-600 font-game"><i class="fas fa-coins"></i> <span id="quizCoins">0</span></span>
+                </div>
+            </div>
+
+            <div class="bg-purple-50 p-4 rounded-2xl border border-purple-200 mb-4 text-center">
+                <h3 id="quizQuestionText" class="font-bold text-slate-800 text-lg">Huruf manakah yang berawalan dari kata "BOLA"?</h3>
+            </div>
+
+            <div id="quizOptionsContainer" class="grid grid-cols-2 gap-3 mb-4"></div>
+
+            <div id="quizBadgeReward" class="hidden bg-yellow-100 border-2 border-yellow-400 p-3 rounded-2xl text-center animate-bounce mb-2">
+                🏆 Selamat! Kamu Mendapatkan Badge: <span id="badgeName" class="font-game text-amber-800">Pahlawan Literasi</span>!
+            </div>
+        </section>
+
+        <!-- 6. MARIO JUMP GAME STAGE (MAIN GAME) -->
+        <section id="screenMarioGame" class="app-screen hidden w-full max-w-4xl h-[90vh] flex flex-col justify-between bg-slate-900/40 rounded-3xl border-4 border-yellow-400 shadow-2xl relative overflow-hidden backdrop-blur-sm">
+            
+            <!-- Game HUD -->
+            <div class="bg-slate-900/80 p-3 text-white flex justify-between items-center z-10 border-b border-yellow-400/30">
+                <div class="flex items-center space-x-4">
+                    <div class="font-game text-yellow-400 text-base sm:text-lg">
+                        <i class="fas fa-trophy mr-1"></i> Skor: <span id="marioScore">0</span>
+                    </div>
+                    <div class="font-game text-emerald-400 text-base sm:text-lg">
+                        <i class="fas fa-layer-group mr-1"></i> Level: <span id="marioLevel">1</span>
+                    </div>
+                </div>
+                <div class="font-bold text-xs sm:text-sm bg-sky-500 px-3 py-1 rounded-full text-white">
+                    IPAS Kelas 5 SD
+                </div>
+            </div>
+
+            <!-- Question Bar Top -->
+            <div class="bg-white/95 p-3 sm:p-4 text-center shadow-lg border-b-2 border-slate-200 z-10">
+                <p id="marioCategory" class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-1">Rantai Makanan & Ekosistem</p>
+                <h3 id="marioQuestion" class="font-game text-sm sm:text-lg text-slate-800 leading-snug">
+                    Organisme yang bertindak sebagai produsen utama dalam ekosistem sawah adalah...
+                </h3>
+            </div>
+
+            <!-- Canvas Display Area -->
+            <div class="relative flex-grow w-full flex items-center justify-center overflow-hidden">
+                <canvas id="gameCanvas" class="w-full h-full"></canvas>
+            </div>
+        <!-- 7. HASIL BELAJAR / RAPOR SISWA -->
+        <section id="screenScoreResult" class="app-screen hidden max-w-md w-full bg-white/95 backdrop-blur-md p-6 rounded-3xl border-4 border-amber-400 shadow-2xl text-center">
+            <div class="text-6xl mb-2 animate-bounce">🏆</div>
+            <h2 class="font-game text-3xl text-amber-800 mb-1">RAPOR BELAJAR SISWA</h2>
+            <p class="text-slate-600 font-bold mb-4 text-xs sm:text-sm">Sertifikat Capaian Petualangan Edukasi</p>
+
+            <div class="bg-amber-50 rounded-2xl p-4 border-2 border-amber-300 mb-5 space-y-2.5 text-left text-sm">
+                <!-- Info Siswa -->
+                <div class="pb-2 border-b border-amber-200">
+                    <div class="flex justify-between items-center font-bold text-slate-800">
+                        <span><i class="fas fa-user-circle text-amber-600 mr-1"></i> Nama Siswa:</span>
+                        <span id="resultStudentName" class="font-game text-amber-900 text-base">Budi Santoso</span>
+                    </div>
+                    <div class="flex justify-between items-center font-bold text-slate-600 text-xs mt-1">
+                        <span><i class="fas fa-school text-amber-600 mr-1"></i> Kelas:</span>
+                        <span id="resultStudentClass" class="font-semibold text-amber-800">Kelas 5 SD</span>
+                    </div>
+                </div>
+
+                <!-- Statistik Game -->
+                <div class="flex justify-between font-bold text-slate-700">
+                    <span>Skor Total Game:</span>
+                    <span id="finalScore" class="font-game text-emerald-600 text-xl">0</span>
+                </div>
+                <div class="flex justify-between font-bold text-slate-700">
+                    <span>Jawaban Benar / Salah:</span>
+                    <span class="font-bold text-slate-800"><span id="finalCorrectCount" class="text-emerald-600">0</span> / <span id="finalWrongCount" class="text-red-500">0</span></span>
+                </div>
+                <div class="flex justify-between font-bold text-slate-700">
+                    <span>Bintang Literasi:</span>
+                    <span id="finalStars" class="font-game text-yellow-500 text-lg">0</span>
+                </div>
+                <div class="flex justify-between font-bold text-slate-700">
+                    <span>Gelar Pencapaian:</span>
+                    <span id="finalBadge" class="font-game text-purple-600">Pahlawan Literasi</span>
+                </div>
+            </div>
+
+            <button onclick="playSFX('click'); showScreen('screenMainMenu')" class="w-full py-3.5 bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-white font-game text-xl rounded-2xl shadow-lg border-b-4 border-teal-700">
+                <i class="fas fa-redo mr-2"></i> Main Lagi
+            </button>
+        </section>
+
+    </main>
+
+    <!-- FOOTER INFO -->
+    <footer class="relative z-10 p-2 text-center text-white/80 text-xs font-semibold">
+        Media Pembelajaran Interaktif IPAS & Literasi SD Kelas 5
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        /* ==========================================================================
+           1. AUDIO SYNTHESIS & SOUND EFFECTS (WEB AUDIO API)
+           ========================================================================== */
+        let audioEnabled = true;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function toggleAudio() {
+            audioEnabled = !audioEnabled;
+            document.getElementById('audioText').innerText = audioEnabled ? "Suara: ON" : "Suara: OFF";
+            document.getElementById('audioIcon').className = audioEnabled ? "fas fa-volume-up mr-1" : "fas fa-volume-mute mr-1";
+        }
+
+        function playSFX(type) {
+            if (!audioEnabled) return;
+            initAudio();
+            
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'jump') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(400, now + 0.15);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            } else if (type === 'correct') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.setValueAtTime(450, now + 0.1);
+                osc.frequency.setValueAtTime(600, now + 0.2);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
+                osc.start(now);
+                osc.stop(now + 0.35);
+            } else if (type === 'wrong') { // Splash / Byur effect
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.linearRampToValueAtTime(60, now + 0.3);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            } else if (type === 'click') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
+                osc.start(now);
+                osc.stop(now + 0.05);
+            }
+        }
+
+        // Text To Speech Synthesis
+        function speakText(text) {
+            if (!audioEnabled) return;
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Stop current speech
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'id-ID';
+                utterance.rate = 0.9;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        /* ==========================================================================
+           2. SCREEN NAVIGATION, STUDENT PROFILE STATE & VISUAL RAIN
+           ========================================================================== */
+        let studentProfile = {
+            name: "Budi Santoso",
+            class: "Kelas 5 SD"
+        };
+
+        let currentSessionStats = {
+            correctAnswers: 0,
+            wrongAnswers: 0
+        };
+
+        function saveStudentProfile() {
+            const nameInput = document.getElementById('inputStudentName').value.trim();
+            const classInput = document.getElementById('selectStudentClass').value;
+            
+            studentProfile.name = nameInput !== "" ? nameInput : "Siswa SD";
+            studentProfile.class = classInput;
+
+            // Update UI Profil di Header & Result Screen
+            document.getElementById('displayHeaderStudentName').innerText = studentProfile.name;
+            document.getElementById('displayHeaderStudentClass').innerText = studentProfile.class;
+            document.getElementById('resultStudentName').innerText = studentProfile.name;
+            document.getElementById('resultStudentClass').innerText = studentProfile.class;
+
+            document.getElementById('headerStudentProfile').classList.remove('hidden');
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.app-screen').forEach(el => el.classList.add('hidden'));
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        // Create rain effect
+        function createRain() {
+            const container = document.getElementById('rainContainer');
+            container.innerHTML = '';
+            for (let i = 0; i < 30; i++) {
+                const drop = document.createElement('div');
+                drop.className = 'rain-drop';
+                drop.style.left = Math.random() * 100 + 'vw';
+                drop.style.animationDuration = (0.8 + Math.random() * 0.8) + 's';
+                drop.style.animationDelay = Math.random() * 2 + 's';
+                container.appendChild(drop);
+            }
+        }
+        createRain();
+
+        /* ==========================================================================
+           3. LEARNING STAGE LOGIC (BELAJAR MEMBACA)
+           ========================================================================== */
+        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+        const letterColors = ["#ef4444", "#22c55e", "#3b82f6", "#eab308", "#a855f7", "#f97316", "#ec4899"];
+
+        function startLearningFlow() {
+            showScreen('screenLearningStage');
+            renderAlphabet();
+            renderSyllables();
+            renderWords();
+            renderPunctuation();
+        }
+
+        function switchLearnTab(tabName) {
+            playSFX('click');
+            document.querySelectorAll('.learn-subtab').forEach(el => el.classList.add('hidden'));
+            if (tabName === 'letters') document.getElementById('tabLetters').classList.remove('hidden');
+            if (tabName === 'syllables') document.getElementById('tabSyllables').classList.remove('hidden');
+            if (tabName === 'words') document.getElementById('tabWords').classList.remove('hidden');
+            if (tabName === 'sentences') {
+                document.getElementById('tabSentences').classList.remove('hidden');
+                renderSentence("Saya suka membaca buku IPAS");
+            }
+            if (tabName === 'punctuation') document.getElementById('tabPunctuation').classList.remove('hidden');
+            if (tabName === 'stories') document.getElementById('tabStories').classList.remove('hidden');
+        }
+
+        function renderAlphabet() {
+            const grid = document.getElementById('alphabetGrid');
+            grid.innerHTML = '';
+            alphabet.forEach((char, idx) => {
+                const color = letterColors[idx % letterColors.length];
+                const btn = document.createElement('button');
+                btn.className = "bubble-letter p-4 rounded-2xl text-2xl font-game text-white shadow-md border-b-4 border-black/20 flex flex-col items-center justify-center transform active:scale-95";
+                btn.style.backgroundColor = color;
+                btn.innerHTML = `<span>${char} ${char.toLowerCase()}</span>`;
+                btn.onclick = () => {
+                    playSFX('click');
+                    speakText(char);
+                    document.getElementById('mascotBubble').innerText = `Ini huruf "${char}"! Bagus sekali!`;
+                    // Spawn sparkling effect
+                    confetti({ particleCount: 15, spread: 40, origin: { y: 0.6 } });
+                };
+                grid.appendChild(btn);
+            });
+        }
+
+        function renderSyllables() {
+            const syllables = ["ba", "bi", "bu", "be", "bo", "ca", "ci", "cu", "ce", "co", "da", "di", "du", "de", "do"];
+            const container = document.getElementById('syllablesContainer');
+            container.innerHTML = '';
+            syllables.forEach((syl, i) => {
+                const btn = document.createElement('button');
+                btn.className = "px-5 py-3 bg-amber-400 hover:bg-amber-500 text-amber-950 font-game text-xl rounded-2xl shadow border-b-4 border-amber-600 active:scale-95";
+                btn.innerText = syl;
+                btn.onclick = () => {
+                    speakText(syl);
+                    document.getElementById('mascotBubble').innerText = `Suku kata: "${syl}"`;
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function renderWords() {
+            const wordList = [
+                { word: "BOLA", icon: "⚽" },
+                { word: "SAPI", icon: "🐄" },
+                { word: "BUKU", icon: "📚" },
+                { word: "RUMAH", icon: "🏠" },
+                { word: "IKAN", icon: "🐟" },
+                { word: "POHON", icon: "🌳" }
+            ];
+            const grid = document.getElementById('wordsGrid');
+            grid.innerHTML = '';
+            wordList.forEach(item => {
+                const card = document.createElement('button');
+                card.className = "p-4 bg-sky-50 hover:bg-sky-100 border-2 border-sky-200 rounded-2xl shadow flex flex-col items-center transform active:scale-95";
+                card.innerHTML = `
+                    <span class="text-4xl mb-2 animate-bounce">${item.icon}</span>
+                    <span class="font-game text-xl text-sky-900">${item.word}</span>
+                `;
+                card.onclick = () => {
+                    speakText(item.word);
+                    document.getElementById('mascotBubble').innerText = `Kata: "${item.word}"!`;
+                };
+                grid.appendChild(card);
+            });
+        }
+
+        let currentSentenceText = "Saya suka membaca buku IPAS";
+        function renderSentence(text) {
+            currentSentenceText = text;
+            const container = document.getElementById('sentenceDisplay');
+            container.innerHTML = '';
+            const words = text.split(" ");
+            words.forEach((w, idx) => {
+                const span = document.createElement('span');
+                span.id = `sent-word-${idx}`;
+                span.className = "px-2 py-1 bg-white border border-slate-300 rounded-xl shadow-sm transition-all";
+                span.innerText = w;
+                container.appendChild(span);
+            });
+        }
+
+        function readCurrentSentence() {
+            speakText(currentSentenceText);
+            const words = currentSentenceText.split(" ");
+            words.forEach((_, idx) => {
+                setTimeout(() => {
+                    words.forEach((__, i) => {
+                        const el = document.getElementById(`sent-word-${i}`);
+                        if (el) el.className = "px-2 py-1 bg-white border border-slate-300 rounded-xl shadow-sm";
+                    });
+                    const activeEl = document.getElementById(`sent-word-${idx}`);
+                    if (activeEl) activeEl.className = "px-2 py-1 bg-yellow-400 text-slate-900 border-2 border-yellow-600 rounded-xl shadow-md scale-110";
+                }, idx * 600);
+            });
+        }
+
+        function renderPunctuation() {
+            const items = [
+                { symbol: ".", name: "Tanda Titik", desc: "Digunakan di akhir kalimat pernyataan." },
+                { symbol: ",", name: "Tanda Koma", desc: "Digunakan untuk jeda atau pemisah." },
+                { symbol: "?", name: "Tanda Tanya", desc: "Digunakan untuk menanyakan sesuatu." },
+                { symbol: "!", name: "Tanda Seru", desc: "Digunakan untuk perintah atau seruan." }
+            ];
+            const grid = document.getElementById('punctuationGrid');
+            grid.innerHTML = '';
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "p-4 bg-purple-50 border-2 border-purple-200 rounded-2xl flex flex-col items-center cursor-pointer hover:bg-purple-100 transition";
+                card.innerHTML = `
+                    <span class="font-game text-5xl text-purple-600 mb-2">${item.symbol}</span>
+                    <span class="font-game text-lg text-purple-900">${item.name}</span>
+                    <span class="text-xs text-purple-700 mt-1">${item.desc}</span>
+                `;
+                card.onclick = () => {
+                    playSFX('click');
+                    speakText(`${item.name}. ${item.desc}`);
+                };
+                grid.appendChild(card);
+            });
+        }
+
+        function readStory() {
+            const text = document.getElementById('storyText').innerText;
+            speakText(text);
+        }
+
+        /* ==========================================================================
+           4. PRACTICE MINI GAMES (MENYUSUN KATA)
+           ========================================================================== */
+        const miniGameWord = { word: "BOLA", icon: "⚽" };
+        let currentDropLetters = [];
+
+        function startPracticeMiniGames() {
+            showScreen('screenPracticeGames');
+            document.getElementById('miniGameTargetIcon').innerText = miniGameWord.icon;
+            
+            const dropZone = document.getElementById('miniGameDropZone');
+            const tilesZone = document.getElementById('miniGameLetterTiles');
+            dropZone.innerHTML = '';
+            tilesZone.innerHTML = '';
+            currentDropLetters = [];
+
+            // Scramble letters
+            const scrambled = miniGameWord.word.split('').sort(() => Math.random() - 0.5);
+
+            scrambled.forEach((char, idx) => {
+                const tile = document.createElement('button');
+                tile.className = "w-12 h-12 bg-amber-400 hover:bg-amber-500 text-amber-950 font-game text-2xl rounded-2xl shadow-md border-b-4 border-amber-600 active:scale-95";
+                tile.innerText = char;
+                tile.onclick = () => {
+                    playSFX('click');
+                    speakText(char);
+                    currentDropLetters.push(char);
+                    renderDropZone();
+                    tile.disabled = true;
+                    tile.classList.add('opacity-40');
+                };
+                tilesZone.appendChild(tile);
+            });
+        }
+
+        function renderDropZone() {
+            const dropZone = document.getElementById('miniGameDropZone');
+            dropZone.innerHTML = '';
+            currentDropLetters.forEach(char => {
+                const box = document.createElement('div');
+                box.className = "w-12 h-12 bg-emerald-400 text-white font-game text-2xl rounded-2xl flex items-center justify-center shadow";
+                box.innerText = char;
+                dropZone.appendChild(box);
+            });
+        }
+
+        function checkSpellingGame() {
+            const result = currentDropLetters.join('');
+            if (result === miniGameWord.word) {
+                playSFX('correct');
+                confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+                speakText("Hebat! Jawabanmu Benar!");
+                setTimeout(() => startMiniQuiz(), 1500);
+            } else {
+                playSFX('wrong');
+                speakText("Coba lagi ya!");
+                startPracticeMiniGames();
+            }
+        }
+
+        /* ==========================================================================
+           5. MINI QUIZ LITERASI LOGIC
+           ========================================================================== */
+        const miniQuizData = [
+            { q: "Manakah kata yang diawali oleh huruf 'S'?", opts: ["BOLA", "SAPI", "BUKU", "MEJA"], ans: 1 },
+            { q: "Tanda baca manakah yang digunakan untuk bertanya?", opts: ["Titik (.)", "Koma (,)", "Tanda Tanya (?)", "Tanda Seru (!)"], ans: 2 }
+        ];
+        let quizIdx = 0;
+        let quizStars = 0;
+        let quizCoins = 0;
+
+        function startMiniQuiz() {
+            showScreen('screenMiniQuiz');
+            quizIdx = 0;
+            loadQuizQuestion();
+        }
+
+        function loadQuizQuestion() {
+            const data = miniQuizData[quizIdx];
+            document.getElementById('quizQuestionText').innerText = data.q;
+            const container = document.getElementById('quizOptionsContainer');
+            container.innerHTML = '';
+
+            data.opts.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "p-4 bg-purple-100 hover:bg-purple-200 text-purple-900 font-game text-lg rounded-2xl shadow border-2 border-purple-300 text-center active:scale-95";
+                btn.innerText = opt;
+                btn.onclick = () => {
+                    if (idx === data.ans) {
+                        playSFX('correct');
+                        quizStars += 5;
+                        quizCoins += 10;
+                        document.getElementById('quizStars').innerText = quizStars;
+                        document.getElementById('quizCoins').innerText = quizCoins;
+                        confetti({ particleCount: 30, spread: 50, origin: { y: 0.6 } });
+
+                        if (quizIdx + 1 < miniQuizData.length) {
+                            quizIdx++;
+                            setTimeout(loadQuizQuestion, 1200);
+                        } else {
+                            document.getElementById('quizBadgeReward').classList.remove('hidden');
+                            speakText("Selamat! Kamu mendapatkan Badge Pahlawan Literasi!");
+                            setTimeout(() => startMarioGame(), 2000);
+                        }
+                    } else {
+                        playSFX('wrong');
+                        btn.classList.add('bg-red-200', 'border-red-400');
+                    }
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        /* ==========================================================================
+           6. MARIO JUMP GAME ENGINE (IPAS GRADE 5)
+           ========================================================================== */
+        const ipasQuestions = [
+            {
+                cat: "Rantai Makanan SD Kelas 5",
+                q: "Organisme yang berperan sebagai produsen dalam rantai makanan ekosistem sawah adalah...",
+                opts: ["Padi (Oryza sativa)", "Belalang", "Ular", "Jamur/Pengurai"],
+                ans: 0
+            },
+            {
+                cat: "Simbiosis IPAS SD",
+                q: "Hubungan antara bunga dan lebah merupakan contoh dari simbiosis...",
+                opts: ["Parasitisme", "Mutualisme", "Komensalisme", "Netralisme"],
+                ans: 1
+            },
+            {
+                cat: "Ekosistem & Bahasa Latin Sederhana",
+                q: "Hewan pemakan tumbuhan disebut herbivora. Contoh hewan pemakan rumput adalah...",
+                opts: ["Harimau (Panthera tigris)", "Sapi (Bos taurus)", "Elang (Accipitridae)", "Serigala"],
+                ans: 1
+            },
+            {
+                cat: "Rantai Makanan SD",
+                q: "Dalam rantai makanan, bakteri dan jamur bertindak sebagai...",
+                opts: ["Konsumen I", "Konsumen II", "Pengurai (Dekomposer)", "Produsen"],
+                ans: 2
+            }
+        ];
+
+        let marioScore = 0;
+        let marioLevel = 1;
+        let currentQIndex = 0;
+
+        // Canvas Setup & Physics
+        let canvas, ctx;
+        let mario = { x: 50, y: 200, width: 36, height: 44, vy: 0, vx: 0, isJumping: false, state: 'idle' };
+        let platforms = [];
+        let particles = [];
+        let ripples = [];
+
+        function startMarioGame() {
+            showScreen('screenMarioGame');
+            marioScore = 0;
+            marioLevel = 1;
+            currentQIndex = 0;
+            document.getElementById('marioScore').innerText = marioScore;
+            document.getElementById('marioLevel').innerText = marioLevel;
+
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            resizeCanvas();
+
+            initMarioLevel();
+            setupControls();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        function initMarioLevel() {
+            const qData = ipasQuestions[currentQIndex % ipasQuestions.length];
+            document.getElementById('marioCategory').innerText = qData.cat;
+            document.getElementById('marioQuestion').innerText = qData.q;
+
+            mario.x = canvas.width / 2 - 18;
+            mario.y = canvas.height - 100;
+            mario.vy = 0;
+            mario.vx = 0;
+
+            // Generate 4 Answer Blocks at top
+            platforms = [];
+            const blockWidth = Math.min(canvas.width / 4 - 15, 140);
+            const startX = (canvas.width - (blockWidth * 4 + 45)) / 2;
+
+            for (let i = 0; i < 4; i++) {
+                platforms.push({
+                    x: startX + i * (blockWidth + 15),
+                    y: 120,
+                    w: blockWidth,
+                    h: 50,
+                    text: qData.opts[i],
+                    isAnswer: i === qData.ans,
+                    optIndex: i
+                });
+            }
+
+            // Ground platform
+            platforms.push({
+                x: 0,
+                y: canvas.height - 40,
+                w: canvas.width,
+                h: 40,
+                isGround: true
+            });
+        }
+
+        // Control handlers
+        let keys = { left: false, right: false, up: false };
+
+        function setupControls() {
+            window.onkeydown = (e) => {
+                if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
+                if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+                if (e.key === 'ArrowUp' || e.key === ' ') keys.up = true;
+            };
+            window.onkeyup = (e) => {
+                if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
+                if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+                if (e.key === 'ArrowUp' || e.key === ' ') keys.up = false;
+            };
+
+            // Touch button listeners
+            const btnLeft = document.getElementById('btnLeft');
+            const btnRight = document.getElementById('btnRight');
+            const btnJump = document.getElementById('btnJump');
+
+            btnLeft.ontouchstart = (e) => { e.preventDefault(); keys.left = true; };
+            btnLeft.ontouchend = (e) => { e.preventDefault(); keys.left = false; };
+            btnRight.ontouchstart = (e) => { e.preventDefault(); keys.right = true; };
+            btnRight.ontouchend = (e) => { e.preventDefault(); keys.right = false; };
+            btnJump.ontouchstart = (e) => { e.preventDefault(); keys.up = true; };
+            btnJump.ontouchend = (e) => { e.preventDefault(); keys.up = false; };
+
+            btnLeft.onmousedown = () => keys.left = true;
+            btnLeft.onmouseup = () => keys.left = false;
+            btnRight.onmousedown = () => keys.right = true;
+            btnRight.onmouseup = () => keys.right = false;
+            btnJump.onmousedown = () => keys.up = true;
+            btnJump.onmouseup = () => keys.up = false;
+        }
+
+        // Main Loop
+        function gameLoop() {
+            if (document.getElementById('screenMarioGame').classList.contains('hidden')) return;
+
+            updatePhysics();
+            renderCanvas();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updatePhysics() {
+            // Horizontal Movement
+            if (keys.left) mario.vx = -5;
+            else if (keys.right) mario.vx = 5;
+            else mario.vx *= 0.8;
+
+            mario.x += mario.vx;
+
+            // Screen boundaries
+            if (mario.x < 0) mario.x = 0;
+            if (mario.x + mario.width > canvas.width) mario.x = canvas.width - mario.width;
+
+            // Jump Action
+            if (keys.up && !mario.isJumping) {
+                mario.vy = -14;
+                mario.isJumping = true;
+                playSFX('jump');
+            }
+
+            // Gravity
+            mario.vy += 0.6;
+            mario.y += mario.vy;
+
+            // Platform Collision Detection
+            platforms.forEach(p => {
+                // Landing on ground
+                if (p.isGround) {
+                    if (mario.y + mario.height >= p.y && mario.y + mario.height <= p.y + p.h) {
+                        mario.y = p.y - mario.height;
+                        mario.vy = 0;
+                        mario.isJumping = false;
+                    }
+                } else {
+                    // Headbutting Block from below
+                    if (mario.vy < 0 && 
+                        mario.x + mario.width > p.x && 
+                        mario.x < p.x + p.w &&
+                        mario.y <= p.y + p.h && 
+                        mario.y >= p.y) {
+                        
+                        mario.vy = 4; // Bounce down
+                        checkAnswerBlock(p);
+                    }
+                }
+            });
+
+            // Update particles
+            particles.forEach((part, idx) => {
+                part.x += part.vx;
+                part.y += part.vy;
+                part.alpha -= 0.02;
+                if (part.alpha <= 0) particles.splice(idx, 1);
+            });
+        }
+
+        function checkAnswerBlock(block) {
+            if (block.isAnswer) {
+                // CORRECT ANSWER!
+                playSFX('correct');
+                marioScore += 5;
+                currentSessionStats.correctAnswers++;
+                document.getElementById('marioScore').innerText = marioScore;
+                confetti({ particleCount: 40, spread: 60, origin: { y: 0.4 } });
+
+                // Bounce Platform Effect
+                block.y -= 15;
+                setTimeout(() => block.y += 15, 150);
+
+                currentQIndex++;
+                if (currentQIndex % ipasQuestions.length === 0) {
+                    marioLevel++;
+                    document.getElementById('marioLevel').innerText = marioLevel;
+
+                    // Tampilkan Rapor Hasil jika sudah menyelesaikan level
+                    setTimeout(() => showFinalReport(), 1500);
+                    return;
+                }
+
+                setTimeout(() => {
+                    initMarioLevel();
+                }, 1000);
+
+            } else {
+                // INCORRECT ANSWER (Mario Dizzy & Water Splash "Byur")
+                playSFX('wrong');
+                currentSessionStats.wrongAnswers++;
+                mario.state = 'sad';
+                
+                // Spawn Water Splash Ripple
+                createSplashParticles(mario.x + mario.width / 2, mario.y + mario.height);
+
+                // Mario falls down
+                mario.vy = 8;
+
+                setTimeout(() => {
+                    mario.state = 'idle';
+                }, 1200);
+            }
+        }
+
+        function showFinalReport() {
+            document.getElementById('finalScore').innerText = marioScore;
+            document.getElementById('finalStars').innerText = quizStars;
+            document.getElementById('finalCorrectCount').innerText = currentSessionStats.correctAnswers;
+            document.getElementById('finalWrongCount').innerText = currentSessionStats.wrongAnswers;
+            showScreen('screenScoreResult');
+            confetti({ particleCount: 70, spread: 80, origin: { y: 0.5 } });
+        }
+
+        function createSplashParticles(x, y) {
+            for (let i = 0; i < 20; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 1) * 6,
+                    color: '#38bdf8',
+                    size: Math.random() * 6 + 3,
+                    alpha: 1
+                });
+            }
+        }
+
+        function renderCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Platforms / Question Blocks
+            platforms.forEach(p => {
+                if (p.isGround) {
+                    // Grass Ground
+                    ctx.fillStyle = '#22c55e';
+                    ctx.fillRect(p.x, p.y, p.w, p.h);
+                    ctx.fillStyle = '#15803d';
+                    ctx.fillRect(p.x, p.y, p.w, 8);
+                } else {
+                    // Question Block Gradient
+                    let grad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + p.h);
+                    grad.addColorStop(0, '#f59e0b');
+                    grad.addColorStop(1, '#d97706');
+
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.roundRect(p.x, p.y, p.w, p.h, 12);
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+
+                    // Block Question Mark / Text
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 12px Quicksand';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    
+                    // Wrap block text
+                    const words = p.text.split(' ');
+                    if (words.length > 2) {
+                        ctx.fillText(words.slice(0, Math.ceil(words.length/2)).join(' '), p.x + p.w/2, p.y + p.h/3);
+                        ctx.fillText(words.slice(Math.ceil(words.length/2)).join(' '), p.x + p.w/2, p.y + (2*p.h)/3);
+                    } else {
+                        ctx.fillText(p.text, p.x + p.w/2, p.y + p.h/2);
+                    }
+                }
+            });
+
+            // Draw Mario Character (SVG Style Canvas Drawing)
+            ctx.save();
+            ctx.translate(mario.x, mario.y);
+
+            if (mario.state === 'sad') {
+                // Sad/Dizzy Mario (Red/Blue Tint)
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(mario.width/2, mario.height/2, 18, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.font = '16px sans-serif';
+                ctx.fillText("😵", 4, 24);
+            } else {
+                // Mario Cap & Body
+                ctx.fillStyle = '#dc2626'; // Red shirt/cap
+                ctx.fillRect(4, 0, 28, 12); // Cap
+                ctx.fillStyle = '#fde047'; // Skin tone
+                ctx.fillRect(6, 12, 24, 14); // Face
+                ctx.fillStyle = '#2563eb'; // Overalls
+                ctx.fillRect(4, 26, 28, 18); // Body
+
+                // Eyes
+                ctx.fillStyle = '#000';
+                ctx.fillRect(20, 16, 4, 4);
+            }
+
+            ctx.restore();
+
+            // Render Splash Particles
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+    </script>
+</body>
+</html>
